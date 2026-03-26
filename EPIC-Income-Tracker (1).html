@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPIC Income Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#e8e4d9;--surf:#f5f2ea;--surf2:#ede9de;--brd:#ccc5b0;--brd2:#b0a88e;
+  --txt:#1c1b18;--mut:#7a7870;--grn:#1a5c35;--grnbg:#eaf3ed;--red:#b83030;--redbg:#fdf0f0;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);color:var(--txt);min-height:100vh;padding:28px 20px 80px;
+  background-color:#ddd8c4;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),linear-gradient(160deg,#e2ddd0 0%,#d9d3c0 40%,#e0dace 70%,#dbd5c2 100%);}
+body>*{position:relative;z-index:1}
+.wrap{max-width:1140px;margin:0 auto}
+
+/* Header */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding-bottom:13px;border-bottom:2px solid var(--txt);margin-bottom:18px}
+.hdr h1{font-weight:700;font-size:21px;letter-spacing:-.4px}
+.hdr-r{display:flex;align-items:center;gap:12px}
+#smsg{font-family:var(--mono);font-size:10px;color:var(--mut)}
+#smsg.ok{color:var(--grn)}
+#smsg.err{color:var(--red)}
+#ts{font-family:var(--mono);font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+
+/* API bar */
+.api-bar{background:var(--surf);border:1px solid var(--brd);border-radius:8px;padding:9px 15px;margin-bottom:14px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.api-bar label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);white-space:nowrap}
+.api-bar input{font-family:var(--mono);font-size:12px;background:var(--surf2);border:1px solid var(--brd);border-radius:4px;padding:5px 8px;color:var(--txt);outline:none;flex:1;min-width:220px;transition:border-color .15s}
+.api-bar input:focus{border-color:var(--grn)}
+.api-bar a{font-family:var(--mono);font-size:10px;color:var(--mut);white-space:nowrap}
+
+/* Summary */
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--brd);border:1px solid var(--brd);border-radius:8px;overflow:hidden;margin-bottom:14px}
+.sc{background:var(--surf);padding:12px 15px}
+.sl{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut);margin-bottom:4px}
+.sv{font-family:var(--mono);font-size:19px;font-weight:500}
+.sv.g{color:var(--grn)}
+
+/* Add form */
+.add-panel{background:var(--surf);border:1px solid var(--brd);border-radius:8px;padding:13px 15px;margin-bottom:14px}
+.add-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut);margin-bottom:9px}
+.add-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+.fld{display:flex;flex-direction:column;gap:3px}
+.fld label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut)}
+.fld input,.fld select{font-family:var(--mono);font-size:12px;background:var(--surf2);border:1px solid var(--brd);border-radius:4px;padding:6px 8px;color:var(--txt);outline:none;transition:border-color .15s}
+.fld input:focus,.fld select:focus{border-color:var(--grn)}
+.fld input.hit{background:#e4f2ea;border-color:#9fc9ae}
+.tnote{font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:2px;min-height:13px}
+.tnote.ok{color:var(--grn)}
+
+/* Buttons */
+.btn{font-family:var(--sans);font-size:12px;font-weight:500;padding:6px 14px;border:none;border-radius:4px;cursor:pointer;white-space:nowrap;transition:opacity .15s}
+.btn:hover{opacity:.85}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn-grn{background:var(--grn);color:#fff}
+.btn-dark{background:var(--txt);color:#fff}
+.btn-out{background:transparent;border:1px solid var(--brd);color:var(--txt)}
+
+/* Table */
+.tbox{background:var(--surf);border:1px solid var(--brd);border-radius:8px;overflow:auto}
+table{width:100%;border-collapse:collapse;min-width:980px}
+thead tr{background:var(--surf2);border-bottom:1px solid var(--brd)}
+th{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);padding:9px 11px;text-align:right;white-space:nowrap}
+th.L{text-align:left}
+tbody tr{border-bottom:1px solid var(--brd);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surf2)}
+td{font-family:var(--mono);font-size:11.5px;padding:10px 11px;text-align:right;vertical-align:middle;white-space:nowrap}
+td.L{text-align:left}
+.inc{color:var(--grn);font-weight:500}
+.zero{color:var(--mut)}
+tfoot tr{background:var(--surf2);border-top:2px solid var(--brd2)}
+tfoot td{font-family:var(--mono);font-size:11.5px;font-weight:500;padding:10px 11px;text-align:right}
+tfoot td.L{text-align:left}
+
+/* Logo cell */
+.lcell{display:flex;align-items:center;gap:7px}
+.lwrap{width:28px;height:28px;border-radius:5px;overflow:hidden;background:var(--surf2);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.tname{display:flex;flex-direction:column;gap:1px}
+.trow{display:flex;align-items:center;gap:4px}
+.tkr{font-weight:600;font-size:12px}
+.nm{font-family:var(--sans);font-size:10px;color:var(--mut);max-width:155px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Badges */
+.badge{font-family:var(--mono);font-size:10px;padding:1px 5px;border-radius:3px}
+.b-opt{background:#eef2ff;color:#4f52cc}
+.b-buy{background:#dcfce7;color:#166534}
+.b-sel{background:#fee2e2;color:#991b1b}
+.ddot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--grn);vertical-align:middle}
+.acct{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:3px;white-space:nowrap}
+
+/* Row buttons */
+.acts{display:flex;gap:3px;justify-content:flex-end}
+.ib{width:24px;height:24px;border:1px solid var(--brd);border-radius:3px;background:var(--surf);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all .1s;color:var(--mut);flex-shrink:0}
+.ib:hover{background:var(--grnbg);border-color:var(--grn);color:var(--grn)}
+.ib.dl:hover{background:var(--redbg);border-color:var(--red);color:var(--red)}
+.lbtn{background:none;border:none;cursor:pointer;padding:0;display:inline-flex;align-items:center;vertical-align:middle;opacity:.7;transition:opacity .15s}
+.lbtn:hover{opacity:1}
+.ladd{font-family:var(--mono);font-size:10px;color:var(--mut);background:none;border:1px solid var(--brd);border-radius:3px;padding:1px 4px;cursor:pointer}
+.ladd:hover{border-color:var(--grn);color:var(--grn)}
+
+/* Modal */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:100;align-items:center;justify-content:center}
+.ov.open{display:flex}
+.modal{background:var(--surf);border:1px solid var(--brd);border-radius:10px;padding:22px 24px;width:310px;box-shadow:0 12px 40px rgba(0,0,0,.15)}
+.modal h3{font-size:14px;font-weight:600;margin-bottom:13px}
+.mf{margin-bottom:10px}
+.mf label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--mut);display:block;margin-bottom:3px}
+.mf input,.mf select{width:100%;font-family:var(--mono);font-size:12px;background:var(--surf2);border:1px solid var(--brd);border-radius:4px;padding:6px 8px;color:var(--txt);outline:none}
+.mf input:focus{border-color:var(--grn)}
+.mbtns{display:flex;gap:8px;margin-top:13px}
+.mbtns .btn{flex:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <h1><strong>EPIC Income Tracker</strong></h1>
+  <div class="hdr-r"><span id="smsg"></span><span id="ts">—</span></div>
+</div>
+
+<div class="api-bar">
+  <label>Tiingo Token</label>
+  <input id="api-in" type="password" placeholder="Paste your token from api.tiingo.com/account/api/token">
+  <button class="btn btn-dark" onclick="saveToken()">Save &amp; Refresh</button>
+  <button class="btn btn-out" id="btn-ref" onclick="refreshPrices()">↻ Refresh Prices</button>
+  <a href="https://api.tiingo.com/account/api/token" target="_blank">Get free token →</a>
+</div>
+
+<div class="strip">
+  <div class="sc"><div class="sl">Holdings</div><div class="sv" id="s-n">0</div></div>
+  <div class="sc"><div class="sl">Portfolio Value</div><div class="sv" id="s-v">$0.00</div></div>
+  <div class="sc"><div class="sl">Quarterly Income</div><div class="sv g" id="s-q">$0.00</div></div>
+  <div class="sc"><div class="sl">Annual Income</div><div class="sv g" id="s-a">$0.00</div></div>
+</div>
+
+<div class="add-panel">
+  <div class="add-title">Add Holding — type ticker to auto-fill</div>
+  <div class="add-row">
+    <div class="fld"><label>Ticker</label><input id="f-t" style="width:82px;text-transform:uppercase" placeholder="AAPL" maxlength="12" autocomplete="off"><div class="tnote" id="t-note"></div></div>
+    <div class="fld"><label>Name</label><input id="f-n" style="width:180px" placeholder="—" tabindex="-1"></div>
+    <div class="fld"><label>Type</label><select id="f-tp" style="width:128px"><option value="dividend">Dividend</option><option value="option">Option Premium</option><option value="bond">Bond/Interest</option><option value="buy">Buy</option><option value="sell">Sell</option></select></div>
+    <div class="fld"><label>Account</label><select id="f-ac" style="width:145px"><option value="Brokerage">Brokerage</option><option value="Eric IRA">Eric IRA</option><option value="Eric Roth IRA">Eric Roth IRA</option><option value="Eric 401k">Eric 401k</option><option value="Tammie IRA">Tammie IRA</option><option value="Tammie Roth IRA">Tammie Roth IRA</option><option value="Pension">Pension</option></select></div>
+    <div class="fld"><label>Shares</label><input id="f-sh" type="number" style="width:88px" placeholder="100" min="0.001" step="any"></div>
+    <div class="fld"><label>Price ($)</label><input id="f-pr" type="number" style="width:88px" placeholder="0.00" min="0" step="0.01" tabindex="-1"></div>
+    <div class="fld"><label>Div Amount ($)</label><input id="f-dv" type="number" style="width:100px" placeholder="0.0000" min="0" step="0.0001" tabindex="-1"></div>
+    <div class="fld"><label>Frequency</label><select id="f-fr" style="width:108px" tabindex="-1"><option value="quarterly">Quarterly</option><option value="monthly">Monthly</option><option value="annual">Annual</option></select></div>
+    <div class="fld"><label>Sector</label><input id="f-sc" style="width:118px" placeholder="ETF" tabindex="-1"></div>
+    <div class="fld"><label style="opacity:0">x</label><button class="btn btn-grn" onclick="addHolding()">+ Add Holding</button></div>
+  </div>
+</div>
+
+<div class="tbox">
+  <table>
+    <thead><tr>
+      <th class="L" style="min-width:200px">Holding</th>
+      <th class="L">Sector</th><th class="L">Account</th>
+      <th>Price</th><th>Yield</th><th>Qtr Div</th><th>Shares</th>
+      <th>Qtr Income</th><th>Ann Income</th><th style="min-width:130px"></th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+    <tfoot><tr>
+      <td class="L" colspan="3">Total</td>
+      <td></td><td></td><td></td><td></td>
+      <td class="inc" id="ftq">—</td><td class="inc" id="fta">—</td><td></td>
+    </tr></tfoot>
+  </table>
+</div>
+
+</div>
+
+<div class="ov" id="ov">
+  <div class="modal">
+    <h3 id="m-ttl">Adjust</h3>
+    <div class="mf"><label id="m-lbl">Amount</label><input type="number" id="m-val" step="any" min="0" placeholder="0"></div>
+    <div class="mf" id="m-drw" style="display:none"><label>DRIP mode</label><select id="m-drp"><option value="shares">Add shares directly</option><option value="dollars">Convert $ dividend → fractional shares</option></select></div>
+    <div class="mbtns"><button class="btn btn-out" onclick="closeModal()">Cancel</button><button class="btn btn-dark" onclick="confirmModal()">Confirm</button></div>
+  </div>
+</div>
+
+<script>
+const G=id=>document.getElementById(id);
+const fmt=n=>Number(n).toLocaleString('en-US',{style:'currency',currency:'USD'});
+const fmtN=(n,d)=>Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+
+// ── Ticker DB ──────────────────────────────────────────────────────────
+const DB={
+  'AMH-G':['American Homes 4 Rent Pref G',22.89,0.3672,'Real Estate','dividend','quarterly'],
+  'PRU':['Prudential Financial',114.20,1.30,'Financials','dividend','quarterly'],
+  'BME':['BlackRock Health Sciences Trust',44.10,0.3175,'Healthcare','dividend','monthly'],
+  'BST':['BlackRock Science & Tech Trust',38.60,0.3625,'Technology','dividend','monthly'],
+  'UTF':['Cohen & Steers Infrastructure Fund',27.30,0.3825,'Utilities','dividend','monthly'],
+  'DODIX':['Dodge & Cox Income Fund',14.20,0.1550,'Bond','bond','monthly'],
+  'MS-O':['Morgan Stanley Preferred Series O',25.10,0.3906,'Financials','dividend','quarterly'],
+  'O':['Realty Income Corporation',54.80,0.2685,'Real Estate','dividend','monthly'],
+  'PFF':['iShares Preferred & Income ETF',31.50,0.1575,'ETF','dividend','monthly'],
+  'PFFA':['Virtus InfraCap US Preferred ETF',21.70,0.1700,'ETF','dividend','monthly'],
+  'QQQ':['Invesco QQQ Trust',478.50,0.5750,'ETF','dividend','quarterly'],
+  'SPYI':['NEOS S&P 500 High Income ETF',48.20,0.4800,'ETF','dividend','monthly'],
+  'SGOV':['iShares 0-3 Month Treasury Bond ETF',100.50,0.3350,'Bond','bond','monthly'],
+  'VZ':['Verizon Communications',41.20,0.6775,'Communication Services','dividend','quarterly'],
+  'VICI':['VICI Properties',29.40,0.4325,'Real Estate','dividend','quarterly'],
+  'SCHD':['Schwab US Dividend Equity ETF',27.52,0.2470,'ETF','dividend','quarterly'],
+  'VIG':['Vanguard Dividend Appreciation ETF',185.40,0.8450,'ETF','dividend','quarterly'],
+  'AAPL':['Apple Inc.',213.50,0.25,'Technology','dividend','quarterly'],
+  'MSFT':['Microsoft Corporation',415.20,0.83,'Technology','dividend','quarterly'],
+  'GOOGL':['Alphabet Inc.',170.40,0.20,'Technology','dividend','quarterly'],
+  'AMZN':['Amazon.com Inc.',198.60,0,'Technology','dividend','quarterly'],
+  'JPM':['JPMorgan Chase & Co.',238.60,1.40,'Financials','dividend','quarterly'],
+  'BAC':['Bank of America',41.50,0.26,'Financials','dividend','quarterly'],
+  'KO':['Coca-Cola Company',63.80,0.485,'Consumer Staples','dividend','quarterly'],
+  'PEP':['PepsiCo Inc.',149.60,1.3575,'Consumer Staples','dividend','quarterly'],
+  'JNJ':['Johnson & Johnson',158.30,1.24,'Healthcare','dividend','quarterly'],
+  'PFE':['Pfizer Inc.',24.10,0.42,'Healthcare','dividend','quarterly'],
+  'ABBV':['AbbVie Inc.',189.40,1.64,'Healthcare','dividend','quarterly'],
+  'XOM':['Exxon Mobil Corporation',109.20,0.99,'Energy','dividend','quarterly'],
+  'CVX':['Chevron Corporation',153.40,1.71,'Energy','dividend','quarterly'],
+  'T':['AT&T Inc.',22.80,0.2775,'Communication Services','dividend','quarterly'],
+  'TMUS':['T-Mobile US',224.40,0.88,'Communication Services','dividend','quarterly'],
+  'IBM':['International Business Machines',231.40,1.67,'Technology','dividend','quarterly'],
+  'CSCO':['Cisco Systems',59.20,0.40,'Technology','dividend','quarterly'],
+  'NEE':['NextEra Energy',70.40,0.5235,'Utilities','dividend','quarterly'],
+  'DUK':['Duke Energy',116.80,1.045,'Utilities','dividend','quarterly'],
+  'SO':['Southern Company',88.60,0.72,'Utilities','dividend','quarterly'],
+  'AMT':['American Tower Corporation',200.40,1.62,'Real Estate','dividend','quarterly'],
+  'CCI':['Crown Castle Inc.',96.80,1.565,'Real Estate','dividend','quarterly'],
+  'SPG':['Simon Property Group',165.30,2.10,'Real Estate','dividend','quarterly'],
+  'WPC':['W. P. Carey Inc.',57.40,0.8665,'Real Estate','dividend','quarterly'],
+  'NNN':['NNN REIT',42.80,0.58,'Real Estate','dividend','quarterly'],
+  'STAG':['STAG Industrial',37.20,0.1233,'Real Estate','dividend','monthly'],
+  'ADC':['Agree Realty',72.40,0.25,'Real Estate','dividend','monthly'],
+  'MAIN':['Main Street Capital',52.80,0.25,'Financials','dividend','monthly'],
+  'ARCC':['Ares Capital Corporation',21.40,0.48,'Financials','dividend','quarterly'],
+  'ENB':['Enbridge Inc.',43.20,0.915,'Energy','dividend','quarterly'],
+  'EPD':['Enterprise Products Partners',31.20,0.535,'Energy','dividend','quarterly'],
+  'ET':['Energy Transfer LP',18.40,0.3225,'Energy','dividend','quarterly'],
+  'MO':['Altria Group',53.80,1.02,'Consumer Staples','dividend','quarterly'],
+  'PM':['Philip Morris International',128.40,1.35,'Consumer Staples','dividend','quarterly'],
+  'WMT':['Walmart Inc.',92.40,0.2075,'Consumer Staples','dividend','quarterly'],
+  'MCD':["McDonald's Corporation",294.10,1.77,'Consumer Discretionary','dividend','quarterly'],
+  'SPY':['SPDR S&P 500 ETF Trust',565.20,1.625,'ETF','dividend','quarterly'],
+  'VOO':['Vanguard S&P 500 ETF',518.40,1.548,'ETF','dividend','quarterly'],
+  'VTI':['Vanguard Total Stock Market ETF',258.60,0.782,'ETF','dividend','quarterly'],
+  'VYM':['Vanguard High Dividend Yield ETF',122.40,0.855,'ETF','dividend','quarterly'],
+  'JEPI':['JPMorgan Equity Premium Income ETF',55.40,0.435,'ETF','dividend','monthly'],
+  'JEPQ':['JPMorgan Nasdaq Equity Premium Income ETF',52.80,0.512,'ETF','dividend','monthly'],
+  'QYLD':['Global X NASDAQ 100 Covered Call ETF',17.20,0.158,'ETF','dividend','monthly'],
+  'XYLD':['Global X S&P 500 Covered Call ETF',43.20,0.421,'ETF','dividend','monthly'],
+  'QQQI':['NEOS Nasdaq 100 High Income ETF',23.40,0.624,'ETF','dividend','monthly'],
+  'TLT':['iShares 20+ Year Treasury Bond ETF',88.20,0.324,'Bond','bond','monthly'],
+  'IEF':['iShares 7-10 Year Treasury Bond ETF',96.40,0.286,'Bond','bond','monthly'],
+  'BND':['Vanguard Total Bond Market ETF',73.80,0.223,'Bond','bond','monthly'],
+  'AGG':['iShares Core US Aggregate Bond ETF',96.20,0.294,'Bond','bond','monthly'],
+  'HYG':['iShares High Yield Corporate Bond ETF',78.40,0.482,'Bond','bond','monthly'],
+  'LQD':['iShares Investment Grade Corp Bond ETF',107.60,0.562,'Bond','bond','monthly'],
+  'PGX':['Invesco Preferred ETF',11.80,0.0698,'ETF','dividend','monthly'],
+  'VNQ':['Vanguard Real Estate ETF',86.40,0.934,'ETF','dividend','quarterly'],
+};
+
+// ── Account badge ──────────────────────────────────────────────────────
+const AC={
+  'Brokerage':['#dbeafe','#1e40af'],'Eric IRA':['#dcfce7','#14532d'],
+  'Eric Roth IRA':['#d1fae5','#065f46'],'Eric 401k':['#fce7f3','#831843'],
+  'Tammie IRA':['#fef9c3','#713f12'],'Tammie Roth IRA':['#fef3c7','#92400e'],
+  'Pension':['#ede9fe','#4c1d95'],
+};
+const acctBadge=a=>{const[bg,fg]=AC[a]||['#f3f4f6','#374151'];return`<span class="acct" style="background:${bg};color:${fg}">${a}</span>`};
+
+// ── Logo ───────────────────────────────────────────────────────────────
+const IC=[['#dbeafe','#1e40af'],['#dcfce7','#166534'],['#fef9c3','#854d0e'],['#fce7f3','#9d174d'],['#ede9fe','#5b21b6'],['#ffedd5','#9a3412']];
+function getLogo(t){
+  const c=t.replace(/[-\.].*/,'');
+  const[bg,fg]=IC[(t.charCodeAt(0)+(t.charCodeAt(1)||0))%IC.length];
+  const init=c.substring(0,2).toUpperCase();
+  const fb=`this.style.display='none';this.nextSibling.style.display='flex'`;
+  return`<img src="https://financialmodelingprep.com/image-stock/${c}.png" onerror="${fb}" loading="lazy" style="width:28px;height:28px;object-fit:contain;border-radius:4px"><span style="display:none;width:28px;height:28px;background:${bg};color:${fg};border-radius:4px;font-size:10px;font-weight:600;align-items:center;justify-content:center;font-family:var(--mono)">${init}</span>`;
+}
+
+// ── SVG icons ──────────────────────────────────────────────────────────
+const GSVG=`<svg width="13" height="13" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
+const SSVG=`<svg width="13" height="13" viewBox="0 0 32 32"><circle cx="16" cy="16" r="16" fill="#00A376"/><text x="16" y="21" text-anchor="middle" font-family="Georgia,serif" font-size="18" font-weight="bold" fill="white">S</text></svg>`;
+
+// ── State ──────────────────────────────────────────────────────────────
+const STORE='epic_clean_v1';
+let holdings=[];
+try{const s=localStorage.getItem(STORE);if(s)holdings=JSON.parse(s)}catch(e){}
+let modalCtx=null;
+function save(){try{localStorage.setItem(STORE,JSON.stringify(holdings))}catch(e){}}
+
+// ── Status ─────────────────────────────────────────────────────────────
+function setStatus(msg,kind){const e=G('smsg');e.textContent=msg;e.className=kind||''}
+
+// ── Token ──────────────────────────────────────────────────────────────
+function saveToken(){
+  const t=G('api-in').value.trim();
+  if(!t){alert('Paste your Tiingo token first.');return}
+  localStorage.setItem('tiingo_token',t);
+  G('api-in').value='';G('api-in').placeholder='Token saved ✓';
+  refreshPrices();
+}
+
+// ── Refresh prices via Tiingo EOD API ─────────────────────────────────
+async function refreshPrices(){
+  const token=localStorage.getItem('tiingo_token');
+  if(!token){setStatus('Add your Tiingo token above to get live prices');return}
+  if(!holdings.length)return;
+  const btn=G('btn-ref');
+  btn.disabled=true;btn.textContent='↻ Refreshing…';
+  setStatus('Fetching prices…');
+  const tickers=[...new Set(holdings.map(h=>h.ticker.toLowerCase()))];
+  const fetches=tickers.map(async t=>{
+    try{
+      const r=await fetch(`https://api.tiingo.com/tiingo/daily/${t}/prices?token=${token}`);
+      if(!r.ok)return null;
+      const d=await r.json();
+      if(Array.isArray(d)&&d.length>0&&d[0].adjClose)return{t,p:d[0].adjClose};
+      if(Array.isArray(d)&&d.length>0&&d[0].close)return{t,p:d[0].close};
+    }catch(e){}
+    return null;
+  });
+  const res=await Promise.allSettled(fetches);
+  const pm={};
+  res.forEach(r=>{if(r.status==='fulfilled'&&r.value)pm[r.value.t]=r.value.p});
+  let upd=0;
+  holdings.forEach(h=>{
+    const p=pm[h.ticker.toLowerCase()];
+    if(p&&p>0){
+      h.price=p;
+      const eq=h.override!==null?+h.override:+h.quarterlyDividend;
+      if(eq>0)h.dividendYield=eq*4/p;
+      upd++;
+    }
+  });
+  save();render();
+  const now=new Date();
+  setStatus(upd>0?`Updated ${upd}/${holdings.length} prices · ${now.toLocaleTimeString()}`:'No prices returned — check token or try again',upd>0?'ok':'err');
+  if(upd>0)localStorage.setItem('last_refresh',now.toISOString());
+  G('ts').textContent=now.toLocaleTimeString();
+  btn.disabled=false;btn.textContent='↻ Refresh Prices';
+}
+
+async function autoRefresh(){
+  const token=localStorage.getItem('tiingo_token');
+  if(!token){setStatus('Add your Tiingo token above to get live prices');return}
+  const last=localStorage.getItem('last_refresh');
+  if(last){
+    const mins=(Date.now()-new Date(last).getTime())/60000;
+    if(mins<60){setStatus(`Prices current as of ${new Date(last).toLocaleTimeString()}`,'ok');return}
+  }
+  refreshPrices();
+}
+
+// ── Auto-fill ──────────────────────────────────────────────────────────
+G('f-t').addEventListener('input',()=>{
+  const t=G('f-t').value.trim().toUpperCase();
+  G('f-t').value=t;
+  const d=DB[t];
+  if(d){
+    G('f-n').value=d[0];G('f-pr').value=d[1];G('f-dv').value=d[2];
+    G('f-sc').value=d[3];G('f-tp').value=d[4];G('f-fr').value=d[5]||'quarterly';
+    ['f-n','f-pr','f-dv','f-sc'].forEach(id=>G(id).classList.add('hit'));
+    G('t-note').textContent='✓ found';G('t-note').className='tnote ok';
+  }else{
+    ['f-n','f-pr','f-dv','f-sc'].forEach(id=>G(id).classList.remove('hit'));
+    G('t-note').textContent=t.length>=2?'not in database — enter manually':'';
+    G('t-note').className='tnote';
+  }
+});
+
+// ── Add holding ────────────────────────────────────────────────────────
+function addHolding(){
+  const ticker=G('f-t').value.trim().toUpperCase();
+  const name=G('f-n').value.trim()||ticker;
+  const type=G('f-tp').value;
+  const account=G('f-ac').value;
+  const shares=parseFloat(G('f-sh').value);
+  const price=parseFloat(G('f-pr').value);
+  const divAmt=parseFloat(G('f-dv').value);
+  const freq=G('f-fr').value;
+  const sector=G('f-sc').value.trim()||'N/A';
+  if(!ticker){alert('Enter a ticker.');return}
+  if(isNaN(shares)||shares<=0){alert('Enter a valid share count.');return}
+  if(isNaN(price)||price<=0){alert('Enter a current price.');return}
+  if(isNaN(divAmt)||divAmt<0){alert('Enter a dividend amount (0 if none).');return}
+  const qDiv=freq==='monthly'?divAmt*3:freq==='annual'?divAmt/4:divAmt;
+  const yld=price>0?qDiv*4/price:0;
+  if(type==='sell'){
+    const ex=holdings.find(h=>h.ticker===ticker&&(h.account||'Brokerage')===account&&h.type!=='buy'&&h.type!=='sell')||holdings.find(h=>h.ticker===ticker&&(h.account||'Brokerage')===account);
+    if(!ex){alert(`No holding found for ${ticker} in ${account}.`);return}
+    ex.shares=Math.max(0,+ex.shares-shares);ex.price=price;
+    if(ex.shares===0&&!confirm(`${ticker} is now 0 shares. Keep it?`))holdings=holdings.filter(h=>h!==ex);
+  }else if(type==='buy'){
+    const ex=holdings.find(h=>h.ticker===ticker&&(h.account||'Brokerage')===account&&h.type!=='buy'&&h.type!=='sell')||holdings.find(h=>h.ticker===ticker&&(h.account||'Brokerage')===account);
+    if(ex){ex.shares=+ex.shares+shares;ex.price=price}
+    else holdings.push({id:Date.now(),ticker,name,type:'dividend',account,sector,price,quarterlyDividend:qDiv,divFreq:freq,divAmount:divAmt,dividendYield:yld,shares,override:null,drip:false,link:null,link2:null});
+  }else{
+    const ex=holdings.find(h=>h.ticker===ticker&&h.type===type&&(h.account||'Brokerage')===account);
+    if(ex){ex.shares=+ex.shares+shares;ex.price=price;ex.name=name;ex.quarterlyDividend=qDiv;ex.divFreq=freq;ex.divAmount=divAmt;ex.dividendYield=yld}
+    else holdings.push({id:Date.now(),ticker,name,type,account,sector,price,quarterlyDividend:qDiv,divFreq:freq,divAmount:divAmt,dividendYield:yld,shares,override:null,drip:false,link:null,link2:null});
+  }
+  save();render();
+  ['f-t','f-n','f-sh','f-pr','f-dv','f-sc'].forEach(id=>{G(id).value='';G(id).classList&&G(id).classList.remove('hit')});
+  G('f-fr').value='quarterly';G('t-note').textContent='';G('t-note').className='tnote';
+}
+
+// ── Links ──────────────────────────────────────────────────────────────
+function editLink(id,which){
+  const h=holdings.find(x=>x.id===id);if(!h)return;
+  const label=which==='schwab'?'Schwab':'Google';
+  const cur=which==='schwab'?(h.link2||''):(h.link||'');
+  const url=prompt(`Paste the ${label} link for ${h.ticker}:`,cur);
+  if(url===null)return;
+  if(which==='schwab')h.link2=url.trim()||null;else h.link=url.trim()||null;
+  save();render();
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────
+function openModal(id,action){
+  const h=holdings.find(x=>x.id===id);if(!h)return;
+  modalCtx={id,action};
+  const eq=h.override!==null?+h.override:+h.quarterlyDividend;
+  G('m-ttl').textContent=action==='add'?`Add Shares — ${h.ticker}`:action==='sub'?`Remove Shares — ${h.ticker}`:action==='drip'?`DRIP — ${h.ticker}`:`Edit Dividend — ${h.ticker}`;
+  G('m-lbl').textContent=action==='add'?'Shares to add':action==='sub'?'Shares to remove':action==='drip'?'Dollar amount to reinvest ($)':'New quarterly dividend ($)';
+  G('m-val').value='';
+  G('m-val').placeholder=action==='drip'?(eq*+h.shares).toFixed(2):action==='editdiv'?eq.toFixed(4):'0';
+  G('m-drw').style.display=action==='drip'?'block':'none';
+  G('ov').classList.add('open');setTimeout(()=>G('m-val').focus(),40);
+}
+G('ov').addEventListener('click',e=>{if(e.target===G('ov'))closeModal()});
+function closeModal(){G('ov').classList.remove('open');modalCtx=null}
+function confirmModal(){
+  if(!modalCtx)return;
+  const{id,action}=modalCtx;
+  const h=holdings.find(x=>x.id===id);if(!h)return;
+  const val=parseFloat(G('m-val').value);
+  if(isNaN(val)||val<0){alert('Enter a valid number.');return}
+  if(action==='add'){h.shares=+h.shares+val}
+  else if(action==='sub'){
+    h.shares=Math.max(0,+h.shares-val);
+    if(h.shares===0&&!confirm(`${h.ticker} is now 0 shares. Keep it?`)){holdings=holdings.filter(x=>x.id!==id);save();render();closeModal();return}
+  }else if(action==='drip'){
+    if(G('m-drp').value==='dollars'){if(+h.price>0){h.shares=+h.shares+val/+h.price;h.drip=true}else{alert('Price is $0 — refresh first.');return}}
+    else{h.shares=+h.shares+val;h.drip=true}
+  }else if(action==='editdiv'){h.override=val;h.dividendYield=+h.price>0?val*4/+h.price:0}
+  save();render();closeModal();
+}
+function delHolding(id){if(!confirm('Remove this holding?'))return;holdings=holdings.filter(h=>h.id!==id);save();render()}
+
+// ── Render ─────────────────────────────────────────────────────────────
+function render(){
+  const tb=G('tbody');
+  let tV=0,tQ=0,tA=0;
+  const sorted=[...holdings].sort((a,b)=>(a.name||a.ticker).localeCompare(b.name||b.ticker));
+  if(!sorted.length){
+    tb.innerHTML='<tr><td colspan="10" style="padding:36px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--mut)">No holdings yet — add one above</td></tr>';
+    upSum(0,0,0,0);return;
+  }
+  tb.innerHTML=sorted.map(h=>{
+    const eq=h.override!==null?+h.override:+h.quarterlyDividend;
+    const sh=+h.shares,pr=+h.price;
+    const qI=eq*sh,aI=qI*4;
+    const yld=pr>0?(eq*4/pr*100).toFixed(2)+'%':'—';
+    tV+=pr*sh;tQ+=qI;tA+=aI;
+    const badge=h.type==='option'?`<span class="badge b-opt">option</span>`:h.type==='buy'?`<span class="badge b-buy">buy</span>`:h.type==='sell'?`<span class="badge b-sel">sell</span>`:'';
+    const ddot=h.drip?`<span class="ddot" title="DRIP"></span>`:'';
+    const freq=h.divFreq==='monthly'?`<span style="font-size:9px;color:var(--mut)"> mo×3</span>`:h.divFreq==='annual'?`<span style="font-size:9px;color:var(--mut)"> ann÷4</span>`:'';
+    const ovr=h.override!==null?`<span style="font-size:10px;color:var(--mut)"> *</span>`:'';
+    const shS=sh===0?`<span style="color:var(--mut)">0</span>`:(sh%1?fmtN(sh,4):fmtN(sh,0));
+    const gBtn=h.link?`<a href="${h.link}" target="_blank" class="lbtn" title="Google">${GSVG}</a>`:`<button class="ladd" onclick="editLink(${h.id},'google')">G+</button>`;
+    const sBtn=h.link2?`<a href="${h.link2}" target="_blank" class="lbtn" title="Schwab">${SSVG}</a>`:`<button class="ladd" onclick="editLink(${h.id},'schwab')">S+</button>`;
+    return`<tr>
+      <td class="L"><div class="lcell"><div class="lwrap">${getLogo(h.ticker)}</div><div class="tname"><div class="trow"><span class="tkr">${h.ticker}</span>${badge}${ddot}${gBtn}${sBtn}</div><span class="nm" title="${h.name}">${h.name}</span></div></div></td>
+      <td class="L" style="font-size:11px;color:var(--mut)">${h.sector}</td>
+      <td class="L">${acctBadge(h.account||'Brokerage')}</td>
+      <td>${pr>0?fmt(pr):'—'}</td>
+      <td>${yld}</td>
+      <td>${fmt(eq)}${ovr}${freq}</td>
+      <td>${shS}</td>
+      <td class="${sh>0?'inc':'zero'}">${sh>0?fmt(qI):'—'}</td>
+      <td class="${sh>0?'inc':'zero'}">${sh>0?fmt(aI):'—'}</td>
+      <td style="min-width:130px"><div class="acts">
+        <button class="ib" onclick="openModal(${h.id},'add')" title="Add shares">+</button>
+        <button class="ib" onclick="openModal(${h.id},'sub')" title="Remove shares">−</button>
+        <button class="ib" onclick="openModal(${h.id},'drip')" title="DRIP">⟳</button>
+        <button class="ib" onclick="openModal(${h.id},'editdiv')" title="Edit dividend">$</button>
+        <button class="ib dl" onclick="delHolding(${h.id})" title="Delete">×</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  G('ftq').textContent=tQ>0?fmt(tQ):'—';
+  G('fta').textContent=tA>0?fmt(tA):'—';
+  upSum(holdings.length,tV,tQ,tA);
+}
+function upSum(n,v,q,a){G('s-n').textContent=n;G('s-v').textContent=fmt(v);G('s-q').textContent=fmt(q);G('s-a').textContent=fmt(a)}
+
+// ── Init ───────────────────────────────────────────────────────────────
+const tk=localStorage.getItem('tiingo_token');
+if(tk)G('api-in').placeholder='Token saved ✓ — auto-refreshing on open';
+render();
+autoRefresh();
+</script>
+</body>
+</html>
